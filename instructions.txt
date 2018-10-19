@@ -1,0 +1,1 @@
+sudo docker run --rm -ti -e INTERFACE=wlan0 -e MODE=guest -e SSID=DAppNodeWIFI -e SUBNET=172.33.10.0 -e AP_ADDR=172.33.10.1 --network=dncore_network -v /var/run/docker.sock:/var/run/docker.sock  --privileged offlinehacker/docker-ap
