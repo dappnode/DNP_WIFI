@@ -1,10 +1,19 @@
 version: '3.4'
+networks:
+  network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.33.0.0/16
 services:
     wifi.public.dappnode.eth:
-        image: 'wifi.public.dappnode.eth:0.0.1'
+        image: 'wifi.dnp.dappnode.eth:0.0.1'
         build: ./build
         volumes:
-            - 'ipfsdnpdappnodeeth_export:/export'
-            - '/home/ipfs_data:/data/ipfs'
-volumes:
-    ipfsdnpdappnodeeth_export: {}
+            - /var/run/docker.sock:/var/run/docker.sock
+        dns: 172.33.1.2
+        privileged: true
+        restart: always
+        networks:
+            network:
+                ipv4_address: 172.33.1.10

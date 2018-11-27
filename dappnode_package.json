@@ -1,19 +1,37 @@
 {
-  "name": "wifi.public.dappnode.eth",
+  "name": "wifi.dnp.dappnode.eth",
   "version": "0.0.1",
-  "description": "Description",
+  "description": "A WIFI hotspot DAppNodePackage",
   "avatar": "",
-  "type": "service",
+  "type": "dncore",
   "image": {
     "path": "",
     "hash": "",
     "size": "",
     "restart": "always",
+    "privileged": "true",
+    "subnet": "172.33.0.0/16",
+    "ipv4_address": "172.33.1.10",
     "volumes": [
-      "ipfsdnpdappnodeeth_export:/export",
-      "/home/ipfs_data:/data/ipfs"
+      "/var/run/docker.sock:/var/run/docker.sock"
     ]
   },
-  "author": "",
-  "license": ""
+  "author": "DAppNode Association <admin@dappnode.io> (https://github.com/dappnode)",
+  "contributors": [
+    "Eduardo Antuña <eduadiez@gmail.com> (https://github.com/eduadiez)"
+  ],
+  "keywords": [
+    "DAppNodeCore",
+    "WIFI",
+    "Hotspot"
+  ],
+  "homepage": "https://github.com/dappnode/DNP_WIFI#readme",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/dappnode/DNP_WIFI"
+  },
+  "bugs": {
+    "url": "https://github.com/dappnode/DNP_WIFI/issues"
+  },
+  "license": "GPL-3.0"
 }

@@ -7,7 +7,6 @@ if [ ! -w "/sys" ] ; then
 fi
 
 # Default values
-true ${INTERFACE:=wlan0}
 true ${SUBNET:=172.33.10.0}
 true ${AP_ADDR:=172.33.10.1}
 true ${SSID:=DAppNodeWIFI}
@@ -26,14 +25,17 @@ if [ "$MODE" == "guest"  ]; then
     CONTAINER_PID=$(docker inspect -f '{{.State.Pid}}' ${CONTAINER_ID})
     CONTAINER_IMAGE=$(docker inspect -f '{{.Config.Image}}' ${CONTAINER_ID})
 
+    INTERFACE=$(docker run -t --privileged --net=host --pid=host --rm --entrypoint /bin/sh wifi.public.dappnode.eth:0.0.1 -c "iw dev" | grep 'Interface' | sed 's/\r//g' | sed 's/\tInterface //g' )
+
+
     docker run -t --privileged --net=host --pid=host --rm --entrypoint /bin/sh ${CONTAINER_IMAGE} -c "
         PHY=\$(echo phy\$(iw dev ${INTERFACE} info | grep wiphy | tr ' ' '\n' | tail -n 1))
         iw phy \$PHY set netns ${CONTAINER_PID}
     "
 
-    ip link set ${INTERFACE} name wlan0
+    #ip link set ${INTERFACE} name wlan0
 
-    INTERFACE=wlan0
+    #INTERFACE=wlan0
 fi
 
 if [ ! -f "/etc/hostapd.conf" ] ; then
@@ -92,8 +94,8 @@ if [ "${OUTGOINGS}" ] ; then
    done
 else
    echo "Setting iptables for outgoing traffics on all interfaces..."
-   iptables -t nat -D POSTROUTING -s ${SUBNET}/24 -j MASQUERADE > /dev/null 2>&1 || true
-   iptables -t nat -A POSTROUTING -s ${SUBNET}/24 -j MASQUERADE
+#   iptables -t nat -D POSTROUTING -s ${SUBNET}/24 -j MASQUERADE > /dev/null 2>&1 || true
+#   iptables -t nat -A POSTROUTING -s ${SUBNET}/24 -j MASQUERADE
 fi
 echo "Configuring DHCP server .."
 
@@ -110,4 +112,5 @@ echo "Starting DHCP server .."
 dhcpd ${INTERFACE}
 
 echo "Starting HostAP daemon ..."
+cat /etc/hostapd.conf
 /usr/sbin/hostapd /etc/hostapd.conf 
