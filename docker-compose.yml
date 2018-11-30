@@ -6,7 +6,7 @@ networks:
       config:
         - subnet: 172.33.0.0/16
 services:
-    wifi.public.dappnode.eth:
+    wifi.dnp.dappnode.eth:
         image: 'wifi.dnp.dappnode.eth:0.0.1'
         build: ./build
         volumes:

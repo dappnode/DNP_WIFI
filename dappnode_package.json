@@ -14,11 +14,15 @@
     "ipv4_address": "172.33.1.10",
     "volumes": [
       "/var/run/docker.sock:/var/run/docker.sock"
+    ],
+    "environment": [
+      "NAT=true"
     ]
   },
   "author": "DAppNode Association <admin@dappnode.io> (https://github.com/dappnode)",
   "contributors": [
-    "Eduardo Antuña <eduadiez@gmail.com> (https://github.com/eduadiez)"
+    "Eduardo Antuña <eduadiez@gmail.com> (https://github.com/eduadiez)",
+    "Abel Vdo <vdo@greyfaze.net> (https://github.com/vdo)"
   ],
   "keywords": [
     "DAppNodeCore",
