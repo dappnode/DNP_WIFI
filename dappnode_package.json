@@ -16,7 +16,11 @@
       "/var/run/docker.sock:/var/run/docker.sock"
     ],
     "environment": [
-      "NAT=true"
+      "SSID=DAppNodeWIFI",
+      "WPA_PASSPHRASE=dappnode",
+      "NAT=true",
+      "INTERFACE=",
+      "CHANNEL=11"
     ]
   },
   "author": "DAppNode Association <admin@dappnode.io> (https://github.com/dappnode)",

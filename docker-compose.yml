@@ -8,6 +8,7 @@ networks:
 services:
     wifi.dnp.dappnode.eth:
         image: 'wifi.dnp.dappnode.eth:0.0.1'
+        name: 'DAppNodeCore-wifi.dnp.dappnode.eth'
         build: ./build
         volumes:
             - /var/run/docker.sock:/var/run/docker.sock
