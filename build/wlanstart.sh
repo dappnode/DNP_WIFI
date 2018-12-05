@@ -7,8 +7,9 @@ if [ ! -w "/sys" ] ; then
 fi
 
 # Default values
-true ${SUBNET:=172.33.10.0}
-true ${AP_ADDR:=172.33.10.1}
+# Set subnet to 172.33.10.0 to get admin access.
+true ${SUBNET:=172.33.100.0}
+true ${AP_ADDR:=172.33.100.254}
 true ${DNS:=172.33.1.2}
 true ${NAT:=true}
 true ${INTERFACE:=}
@@ -22,21 +23,26 @@ true ${MODE:=guest}
 
 # Attach interface to container in guest mode
 if [ "$MODE" == "guest"  ]; then
-    echo "Attaching interface to container"
-
     CONTAINER_PID=$(docker inspect -f '{{.State.Pid}}' ${HOSTNAME})
     CONTAINER_IMAGE=$(docker inspect -f '{{.Config.Image}}' ${HOSTNAME})
 
     if [ -z ${INTERFACE} ]; then
-      INTERFACE=$(docker run -t --privileged --net=host --pid=host --rm --entrypoint /bin/sh ${CONTAINER_IMAGE} -c "iw dev" | grep 'Interface' | awk 'NR==1{print $2}' )
+      INTERFACE=$(docker run -t --privileged --net=host --pid=host --rm --entrypoint /bin/sh ${CONTAINER_IMAGE} -c "iw dev" | grep 'Interface' | awk 'NR==1{print $2}')
     fi
-
-    docker run -t --privileged --net=host --pid=host --rm --entrypoint /bin/sh ${CONTAINER_IMAGE} -c "
+    
+    echo "Attaching interface ${INTERFACE} to container"
+    IFACE_OPSTATE=$(docker run -t --privileged --net=host --pid=host --rm --entrypoint /bin/sh ${CONTAINER_IMAGE} -c "cat /sys/class/net/${INTERFACE}/operstate")
+    if [ ${IFACE_OPSTATE::-1} = "down" ]; then
+      docker run -t --privileged --net=host --pid=host --rm --entrypoint /bin/sh ${CONTAINER_IMAGE} -c "
         PHY=\$(echo phy\$(iw dev ${INTERFACE} info | grep wiphy | tr ' ' '\n' | tail -n 1))
         iw phy \$PHY set netns ${CONTAINER_PID}"
 
-    ip link set ${INTERFACE} name wlan0
-    INTERFACE=wlan0
+      ip link set ${INTERFACE} name wlan0
+      INTERFACE=wlan0
+    else
+      echo "[Error] Interface ${INTERFACE} already connected."
+      exit 1
+    fi
 fi
 
 if [ ! -f "/etc/hostapd.conf" ]; then
@@ -110,7 +116,7 @@ option domain-name-servers ${DNS};
 option subnet-mask 255.255.255.0;
 option routers ${AP_ADDR};
 subnet ${SUBNET} netmask 255.255.255.0 {
-  range ${SUBNET::-1}100 ${SUBNET::-1}254;
+  range ${SUBNET::-1}100 ${SUBNET::-1}253;
 }
 EOF
 

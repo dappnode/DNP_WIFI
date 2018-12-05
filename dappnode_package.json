@@ -1,11 +1,11 @@
 {
   "name": "wifi.dnp.dappnode.eth",
   "version": "0.0.1",
-  "description": "A WIFI hotspot DAppNodePackage",
+  "description": "A WIFI hotspot for DAppNode",
   "avatar": "",
   "type": "dncore",
   "image": {
-    "path": "",
+    "path": "wifi.dnp.dappnode.eth_0.0.1.tar.xz",
     "hash": "",
     "size": "",
     "restart": "always",
