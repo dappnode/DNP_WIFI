@@ -10,8 +10,10 @@ services:
         image: 'wifi.dnp.dappnode.eth:0.0.1'
         container_name: 'DAppNodeCore-wifi.dnp.dappnode.eth'
         build: ./build
+        env_file:
+          - wifi.dnp.dappnode.eth.env
         volumes:
-            - /var/run/docker.sock:/var/run/docker.sock
+          - /var/run/docker.sock:/var/run/docker.sock
         dns: 172.33.1.2
         privileged: true
         restart: always
