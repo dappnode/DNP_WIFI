@@ -61,6 +61,7 @@ jobs:
         body: "# Changelog"
         on:
           branch: master
+          all_branches: true
       after_deploy:
         echo "Successfully released"
         # - export GIT_BRANCH="master"
