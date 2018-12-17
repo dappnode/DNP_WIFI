@@ -7,9 +7,8 @@ if [ ! -w "/sys" ] ; then
 fi
 
 # Default values
-# Set subnet to 172.33.10.0 to get admin access.
-true ${SUBNET:=172.33.100.0}
-true ${AP_ADDR:=172.33.100.254}
+true ${SUBNET:=172.33.10.0}
+true ${AP_ADDR:=172.33.10.254}
 true ${DNS:=172.33.1.2}
 true ${NAT:=true}
 true ${INTERFACE:=}
@@ -19,30 +18,33 @@ true ${WPA_PASSPHRASE:=dappnode}
 true ${HW_MODE:=g}
 true ${DRIVER:=nl80211}
 true ${HT_CAPAB:=[HT40-][SHORT-GI-20][SHORT-GI-40]}
-true ${MODE:=guest}
+true ${MODE:=admin}
 
 # Attach interface to container in guest mode
+# This will force NAT to be disabled!
 if [ "$MODE" == "guest"  ]; then
-    CONTAINER_PID=$(docker inspect -f '{{.State.Pid}}' ${HOSTNAME})
-    CONTAINER_IMAGE=$(docker inspect -f '{{.Config.Image}}' ${HOSTNAME})
+  SUBNET=172.33.100.0
+  AP_ADDR=172.33.100.254
+  NAT=false
+fi
 
-    if [ -z ${INTERFACE} ]; then
-      INTERFACE=$(docker run -t --privileged --net=host --pid=host --rm --entrypoint /bin/sh ${CONTAINER_IMAGE} -c "iw dev" | grep 'Interface' | awk 'NR==1{print $2}')
-    fi
-    
-    echo "Attaching interface ${INTERFACE} to container"
-    IFACE_OPSTATE=$(docker run -t --privileged --net=host --pid=host --rm --entrypoint /bin/sh ${CONTAINER_IMAGE} -c "cat /sys/class/net/${INTERFACE}/operstate")
-    if [ ${IFACE_OPSTATE::-1} = "down" ]; then
-      docker run -t --privileged --net=host --pid=host --rm --entrypoint /bin/sh ${CONTAINER_IMAGE} -c "
-        PHY=\$(echo phy\$(iw dev ${INTERFACE} info | grep wiphy | tr ' ' '\n' | tail -n 1))
-        iw phy \$PHY set netns ${CONTAINER_PID}"
+CONTAINER_PID=$(docker inspect -f '{{.State.Pid}}' ${HOSTNAME})
+CONTAINER_IMAGE=$(docker inspect -f '{{.Config.Image}}' ${HOSTNAME})
+if [ -z ${INTERFACE} ]; then
+  INTERFACE=$(docker run -t --privileged --net=host --pid=host --rm --entrypoint /bin/sh ${CONTAINER_IMAGE} -c "iw dev" | grep 'Interface' | awk 'NR==1{print $2}')
+fi
 
-      ip link set ${INTERFACE} name wlan0
-      INTERFACE=wlan0
-    else
-      echo "[Error] Interface ${INTERFACE} already connected."
-      exit 1
-    fi
+echo "Attaching interface ${INTERFACE} to container"
+IFACE_OPSTATE=$(docker run -t --privileged --net=host --pid=host --rm --entrypoint /bin/sh ${CONTAINER_IMAGE} -c "cat /sys/class/net/${INTERFACE}/operstate")
+if [ ${IFACE_OPSTATE::-1} = "down" ]; then
+  docker run -t --privileged --net=host --pid=host --rm --entrypoint /bin/sh ${CONTAINER_IMAGE} -c "
+    PHY=\$(echo phy\$(iw dev ${INTERFACE} info | grep wiphy | tr ' ' '\n' | tail -n 1))
+    iw phy \$PHY set netns ${CONTAINER_PID}"
+  ip link set ${INTERFACE} name wlan0
+  INTERFACE=wlan0
+else
+  echo "[Error] Interface ${INTERFACE} already connected."
+  exit 1
 fi
 
 if [ ! -f "/etc/hostapd.conf" ]; then

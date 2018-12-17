@@ -20,7 +20,8 @@
       "WPA_PASSPHRASE=dappnode",
       "NAT=true",
       "INTERFACE=",
-      "CHANNEL=11"
+      "CHANNEL=11",
+      "MODE=admin"
     ]
   },
   "author": "DAppNode Association <admin@dappnode.io> (https://github.com/dappnode)",
