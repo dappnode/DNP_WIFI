@@ -60,8 +60,10 @@ jobs:
         name: "$TRAVIS_TAG"
         body: "# Changelog"
         on:
-          branch: master
-          all_branches: true
+          branches:
+            only:
+              - master
+              - /v\d+\.\d+[a-z]/
       after_deploy:
         echo "Successfully released"
         # - export GIT_BRANCH="master"
