@@ -48,6 +48,7 @@ jobs:
         - if [ $DELETE_TAG ]; then git tag --delete $TRAVIS_TAG || echo "Error deleting tag locally" ; fi
         # Tag this commit
         - git tag "$TRAVIS_TAG"
+        - git push origin "$TRAVIS_TAG"
         # Return to master.
         - git checkout master
       deploy:
