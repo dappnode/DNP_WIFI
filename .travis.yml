@@ -2,21 +2,9 @@ sudo: required
 
 jobs:
   include:
-    # In app tests
-    ##############
-    #- stage: test
-    #  services:
-    #    - docker
-    #  env:
-    #    - INTEGRATION_TEST
-    #  before_install:
-    #    - chmod +x test/test.sh
-    #  script:
-    #    - test/test.sh
-
     # Test that it builds correctly
     ###############################
-    - stage: build
+    - stage: build test
       services:
         - docker
       script:
@@ -33,7 +21,7 @@ jobs:
       before_deploy:
         # Run the dappnodesdk
         - travis_retry npm install -g @dappnode/dappnodesdk
-        - export TRAVIS_TAG=v$(IPFS_PROVIDER=ipfs.infura.io IPFS_PROTO=https PROVIDER=wss://mainnet.infura.io/ws dappnodesdk next patch)
+        - export TRAVIS_TAG=$(IPFS_PROVIDER=ipfs.infura.io IPFS_PROTO=https PROVIDER=wss://mainnet.infura.io/ws dappnodesdk next patch)
         - echo "NEXT TRAVIS_TAG $TRAVIS_TAG"
         - IPFS_PROVIDER=ipfs.infura.io IPFS_PROTO=https PROVIDER=wss://mainnet.infura.io/ws SILENT=true dappnodesdk publish patch
         # Set up git user name
@@ -47,8 +35,7 @@ jobs:
         - if [ $DELETE_TAG ]; then git push --delete origin $TRAVIS_TAG || echo "Error deleting tag from origin" ; fi
         - if [ $DELETE_TAG ]; then git tag --delete $TRAVIS_TAG || echo "Error deleting tag locally" ; fi
         # Tag this commit
-        - git tag "$TRAVIS_TAG"
-        - git push origin "$TRAVIS_TAG"
+        - git tag $TRAVIS_TAG
         # Return to master.
         - git checkout master
       deploy:
@@ -58,10 +45,10 @@ jobs:
         file_glob: true
         file: build_${TRAVIS_TAG}/*
         skip_cleanup: true
-        name: "$TRAVIS_TAG"
+        name: "v$TRAVIS_TAG"
         body: "# Changelog"
         on:
-          tags: true
+          branch: master
       after_deploy:
         echo "Successfully released"
         # - export GIT_BRANCH="master"
