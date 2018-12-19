@@ -34,6 +34,11 @@ if [ -z ${INTERFACE} ]; then
   INTERFACE=$(docker run -t --privileged --net=host --pid=host --rm --entrypoint /bin/sh ${CONTAINER_IMAGE} -c "iw dev" | grep 'Interface' | awk 'NR==1{print $2}')
 fi
 
+if [ -z ${INTERFACE} ]; then
+  echo "[Warning] No interface found. Entering sleep mode."
+  while true; do sleep 1; done
+fi
+
 echo "Attaching interface ${INTERFACE} to container"
 IFACE_OPSTATE=$(docker run -t --privileged --net=host --pid=host --rm --entrypoint /bin/sh ${CONTAINER_IMAGE} -c "cat /sys/class/net/${INTERFACE}/operstate")
 if [ ${IFACE_OPSTATE::-1} = "down" ]; then
@@ -43,8 +48,8 @@ if [ ${IFACE_OPSTATE::-1} = "down" ]; then
   ip link set ${INTERFACE} name wlan0
   INTERFACE=wlan0
 else
-  echo "[Error] Interface ${INTERFACE} already connected."
-  exit 1
+  echo "[Warning] Interface ${INTERFACE} already connected. Entering sleep mode."
+  while true; do sleep 1; done
 fi
 
 if [ ! -f "/etc/hostapd.conf" ]; then
