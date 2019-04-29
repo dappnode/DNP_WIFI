@@ -1,4 +1,4 @@
-version: '3.4'
+version: "3.4"
 networks:
   network:
     driver: bridge
@@ -6,22 +6,21 @@ networks:
       config:
         - subnet: 172.33.0.0/16
 services:
-    wifi.dnp.dappnode.eth:
-        image: 'wifi.dnp.dappnode.eth:0.2.0'
-        container_name: 'DAppNodeCore-wifi.dnp.dappnode.eth'
-        build: ./build
-        env_file:
-          - wifi.dnp.dappnode.eth.env
-        volumes:
-          - /var/run/docker.sock:/var/run/docker.sock
-        dns: 172.33.1.2
-        privileged: true
-        restart: always
-        networks:
-            network:
-                ipv4_address: 172.33.1.10
-        logging:
-            options:
-                max-size: "10m"
-                max-file: "3"
-
+  wifi.dnp.dappnode.eth:
+    image: "wifi.dnp.dappnode.eth:0.2.0"
+    container_name: "DAppNodeCore-wifi.dnp.dappnode.eth"
+    build: ./build
+    env_file:
+      - wifi.dnp.dappnode.eth.env
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    dns: 172.33.1.2
+    privileged: true
+    restart: always
+    networks:
+      network:
+        ipv4_address: 172.33.1.10
+    logging:
+      options:
+        max-size: "10m"
+        max-file: "3"

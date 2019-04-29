@@ -12,29 +12,25 @@
     "privileged": "true",
     "subnet": "172.33.0.0/16",
     "ipv4_address": "172.33.1.10",
-    "volumes": [
-      "/var/run/docker.sock:/var/run/docker.sock"
-    ],
-    "environment": [
-      "SSID=DAppNodeWIFI",
-      "WPA_PASSPHRASE=dappnode",
-      "NAT=true",
-      "CHANNEL=11",
-      "MODE=admin",
-      "INTERFACE"
-    ]
+    "volumes": ["/var/run/docker.sock:/var/run/docker.sock"],
+    "environment": {
+      "SSID": "DAppNodeWIFI",
+      "WPA_PASSPHRASE": "dappnode",
+      "NAT": "true",
+      "CHANNEL": "11",
+      "MODE": "admin",
+      "INTERFACE": ""
+    }
   },
   "author": "DAppNode Association <admin@dappnode.io> (https://github.com/dappnode)",
   "contributors": [
     "Eduardo Antuña <eduadiez@gmail.com> (https://github.com/eduadiez)",
     "Abel Vdo <vdo@greyfaze.net> (https://github.com/vdo)"
   ],
-  "keywords": [
-    "DAppNodeCore",
-    "WIFI",
-    "Hotspot"
-  ],
-  "homepage": "https://github.com/dappnode/DNP_WIFI#readme",
+  "keywords": ["DAppNodeCore", "WIFI", "Hotspot"],
+  "links": {
+    "homepage": "https://github.com/dappnode/DNP_WIFI#readme"
+  },
   "repository": {
     "type": "git",
     "url": "https://github.com/dappnode/DNP_WIFI"
