@@ -7,8 +7,8 @@ if [ ! -w "/sys" ] ; then
 fi
 
 # Default values
-true ${SUBNET:=172.33.10.0}
-true ${AP_ADDR:=172.33.10.254}
+true ${SUBNET:=172.33.12.0}
+true ${AP_ADDR:=172.33.12.254}
 true ${DNS:=172.33.1.2}
 true ${NAT:=true}
 true ${INTERFACE:=}
