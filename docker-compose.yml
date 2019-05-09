@@ -7,7 +7,7 @@ networks:
         - subnet: 172.33.0.0/16
 services:
   wifi.dnp.dappnode.eth:
-    image: "wifi.dnp.dappnode.eth:0.2.0"
+    image: "wifi.dnp.dappnode.eth:0.2.1"
     container_name: "DAppNodeCore-wifi.dnp.dappnode.eth"
     build: ./build
     env_file:

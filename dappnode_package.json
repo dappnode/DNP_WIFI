@@ -1,6 +1,6 @@
 {
   "name": "wifi.dnp.dappnode.eth",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "A WIFI hotspot for DAppNode",
   "avatar": "",
   "type": "dncore",
