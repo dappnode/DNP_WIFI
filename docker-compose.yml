@@ -1,4 +1,4 @@
-version: "3.4"
+version: '3.4'
 networks:
   network:
     driver: bridge
@@ -10,10 +10,15 @@ services:
     image: "wifi.dnp.dappnode.eth:0.2.1"
     container_name: "DAppNodeCore-wifi.dnp.dappnode.eth"
     build: ./build
-    env_file:
-      - wifi.dnp.dappnode.eth.env
+    environment:
+      - SSID=DAppNodeWIFI
+      - WPA_PASSPHRASE=dappnode
+      - NAT=true
+      - CHANNEL=11
+      - MODE=admin
+      - INTERFACE
     volumes:
-      - /var/run/docker.sock:/var/run/docker.sock
+      - '/var/run/docker.sock:/var/run/docker.sock'
     dns: 172.33.1.2
     privileged: true
     restart: always
@@ -22,5 +27,5 @@ services:
         ipv4_address: 172.33.1.10
     logging:
       options:
-        max-size: "10m"
-        max-file: "3"
+        max-size: 10m
+        max-file: '3'

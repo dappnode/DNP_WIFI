@@ -2,26 +2,7 @@
   "name": "wifi.dnp.dappnode.eth",
   "version": "0.2.1",
   "description": "A WIFI hotspot for DAppNode",
-  "avatar": "",
   "type": "dncore",
-  "image": {
-    "path": "",
-    "hash": "",
-    "size": "",
-    "restart": "always",
-    "privileged": "true",
-    "subnet": "172.33.0.0/16",
-    "ipv4_address": "172.33.1.10",
-    "volumes": ["/var/run/docker.sock:/var/run/docker.sock"],
-    "environment": [
-      "SSID=DAppNodeWIFI",
-      "WPA_PASSPHRASE=dappnode",
-      "NAT=true",
-      "CHANNEL=11",
-      "MODE=admin",
-      "INTERFACE="
-    ]
-  },
   "author": "DAppNode Association <admin@dappnode.io> (https://github.com/dappnode)",
   "contributors": [
     "Eduardo Antuña <eduadiez@gmail.com> (https://github.com/eduadiez)",
