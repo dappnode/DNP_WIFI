@@ -1,6 +1,6 @@
 {
   "name": "wifi.dnp.dappnode.eth",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "A WIFI hotspot for DAppNode",
   "type": "dncore",
   "author": "DAppNode Association <admin@dappnode.io> (https://github.com/dappnode)",
@@ -8,7 +8,11 @@
     "Eduardo Antuña <eduadiez@gmail.com> (https://github.com/eduadiez)",
     "Abel Vdo <vdo@greyfaze.net> (https://github.com/vdo)"
   ],
-  "keywords": ["DAppNodeCore", "WIFI", "Hotspot"],
+  "keywords": [
+    "DAppNodeCore",
+    "WIFI",
+    "Hotspot"
+  ],
   "links": {
     "homepage": "https://github.com/dappnode/DNP_WIFI#readme"
   },
