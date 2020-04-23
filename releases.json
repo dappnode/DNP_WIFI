@@ -5,5 +5,13 @@
     "uploadedTo": {
       "dappnode": "Fri, 17 Apr 2020 18:34:48 GMT"
     }
+  },
+  "0.2.2": {
+    "hash": "/ipfs/QmbDvxbNCP7dpPfWxWrPmNfWyZyZf1v19wXmiy8rEeCpTW",
+    "type": "directory",
+    "uploadedTo": {
+      "dappnode": "Tue, 21 Apr 2020 17:41:26 GMT"
+    },
+    "link": "http://my.dappnode/#/sdk/publish/r=wifi.dnp.dappnode.eth&v=0.2.2&h=%2Fipfs%2FQmbDvxbNCP7dpPfWxWrPmNfWyZyZf1v19wXmiy8rEeCpTW"
   }
 }
