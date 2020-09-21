@@ -3,6 +3,10 @@
   "version": "0.2.4",
   "description": "A WIFI hotspot for DAppNode",
   "type": "dncore",
+  "architectures": [
+    "linux/amd64",
+    "linux/arm64"
+  ],
   "author": "DAppNode Association <admin@dappnode.io> (https://github.com/dappnode)",
   "contributors": [
     "Eduardo Antuña <eduadiez@gmail.com> (https://github.com/eduadiez)",
