@@ -1,4 +1,4 @@
-version: '3.4'
+version: "3.4"
 networks:
   network:
     driver: bridge
@@ -8,7 +8,7 @@ networks:
 services:
   wifi.dnp.dappnode.eth:
     build: ./build
-    image: 'wifi.dnp.dappnode.eth:0.2.4'
+    image: "wifi.dnp.dappnode.eth:0.2.5"
     container_name: DAppNodeCore-wifi.dnp.dappnode.eth
     environment:
       - SSID=DAppNodeWIFI
@@ -18,7 +18,7 @@ services:
       - MODE=admin
       - INTERFACE
     volumes:
-      - '/var/run/docker.sock:/var/run/docker.sock'
+      - "/var/run/docker.sock:/var/run/docker.sock"
     dns: 172.33.1.2
     privileged: true
     restart: always
