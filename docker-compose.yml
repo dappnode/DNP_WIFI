@@ -7,9 +7,9 @@ networks:
         - subnet: 172.33.0.0/16
 services:
   wifi.dnp.dappnode.eth:
+    build: ./build
     image: 'wifi.dnp.dappnode.eth:0.2.4'
     container_name: DAppNodeCore-wifi.dnp.dappnode.eth
-    build: ./build
     environment:
       - SSID=DAppNodeWIFI
       - WPA_PASSPHRASE=dappnode
