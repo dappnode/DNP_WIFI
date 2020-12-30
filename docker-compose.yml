@@ -8,7 +8,7 @@ networks:
 services:
   wifi.dnp.dappnode.eth:
     build: ./build
-    image: "wifi.dnp.dappnode.eth:0.2.5"
+    image: "wifi.dnp.dappnode.eth:0.2.7"
     container_name: DAppNodeCore-wifi.dnp.dappnode.eth
     environment:
       - SSID=DAppNodeWIFI
