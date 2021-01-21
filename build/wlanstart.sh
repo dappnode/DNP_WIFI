@@ -17,7 +17,7 @@ true ${CHANNEL:=11}
 true ${WPA_PASSPHRASE:=dappnode}
 true ${HW_MODE:=g}
 true ${DRIVER:=nl80211}
-true ${HT_CAPAB:=[HT40-][SHORT-GI-20][SHORT-GI-40]}
+true ${HT_CAPAB:=[HT40-][SHORT-GI-20]}
 
 CONTAINER_PID=$(docker inspect -f '{{.State.Pid}}' ${HOSTNAME})
 CONTAINER_IMAGE=$(docker inspect -f '{{.Config.Image}}' ${HOSTNAME})
@@ -29,6 +29,11 @@ if [ -z ${INTERFACE} ]; then
   echo "[Warning] No interface found. Entering sleep mode."
   while true; do sleep 1; done
 fi
+
+# Not all the WIFI drivers are compatilbe with [SHORT-GI-20] (e.g., RaspberryPi 4)
+# So we need to check it before add it
+CHECK_CAPAB=$(docker run -t --privileged --net=host --pid=host --rm --entrypoint /bin/sh ${CONTAINER_IMAGE} -c "iw list" | grep -q 'short GI for 40 MHz' && echo '[SHORT-GI-20]' || echo '' )
+HT_CAPAB="${HT_CAPAB}${CHECK_CAPAB}"
 
 echo "Attaching interface ${INTERFACE} to container"
 IFACE_OPSTATE=$(docker run -t --privileged --net=host --pid=host --rm --entrypoint /bin/sh ${CONTAINER_IMAGE} -c "cat /sys/class/net/${INTERFACE}/operstate")
@@ -53,8 +58,6 @@ channel=${CHANNEL}
 wpa=2
 wpa_passphrase=${WPA_PASSPHRASE}
 wpa_key_mgmt=WPA-PSK
-# TKIP is no secure anymore
-#wpa_pairwise=TKIP CCMP
 wpa_pairwise=CCMP
 rsn_pairwise=CCMP
 wpa_ptk_rekey=600
