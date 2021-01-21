@@ -18,15 +18,6 @@ true ${WPA_PASSPHRASE:=dappnode}
 true ${HW_MODE:=g}
 true ${DRIVER:=nl80211}
 true ${HT_CAPAB:=[HT40-][SHORT-GI-20][SHORT-GI-40]}
-true ${MODE:=admin}
-
-# Attach interface to container in guest mode
-# This will force NAT to be disabled!
-if [ "$MODE" == "guest"  ]; then
-  SUBNET=172.33.100.0
-  AP_ADDR=172.33.100.254
-  NAT=false
-fi
 
 CONTAINER_PID=$(docker inspect -f '{{.State.Pid}}' ${HOSTNAME})
 CONTAINER_IMAGE=$(docker inspect -f '{{.Config.Image}}' ${HOSTNAME})

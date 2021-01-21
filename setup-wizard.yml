@@ -1,0 +1,49 @@
+version: "2"
+fields:
+  - id: ssid
+    target:
+      type: environment
+      name: SSID
+    title: WIFI SSID
+    description: >-
+      Name of your DAppNode Hotspot WIFI network
+    required: true
+  - id: wpa_passphrase
+    target:
+      type: environment
+      name: WPA_PASSPHRASE
+    title: Password
+    description: >-
+      Set your dappnode's WIFI password
+    secret: true
+    required: true
+    pattern: "^.{8,63}$"
+    patternErrorMessage: "The password needs to have a length between 8 and 63 characters"
+  - id: advanced
+    target:
+      type: environment
+      name: ADVANCED_OPTIONS
+    title: Advanced Options
+    description: >-
+      Select yes to configure advanced options
+    enum:
+      - no
+      - yes
+  - id: channel
+    target:
+      type: environment
+      name: CHANNEL
+    title: WIFI CHANNEL
+    description: >-
+      Variable to configure your wifi channel
+    required: true
+    if: { "advanced": { "enum": ["yes"] } }
+  - id: nat
+    target:
+      type: environment
+      name: NAT
+    title: NAT
+    description: >-
+      Variable to configure the WIFI as NAT
+    required: true
+    if: { "advanced": { "enum": ["yes"] } }
