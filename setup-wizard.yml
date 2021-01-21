@@ -4,9 +4,9 @@ fields:
     target:
       type: environment
       name: SSID
-    title: WIFI SSID
+    title: WiFi Network Name (WIFI SSID)
     description: >-
-      Name of your DAppNode Hotspot WIFI network
+      Name of your DAppNode's WiFi Hotspot network
     required: true
   - id: wpa_passphrase
     target:
@@ -14,7 +14,7 @@ fields:
       name: WPA_PASSPHRASE
     title: Password
     description: >-
-      Set your dappnode's WIFI password
+      Set your dappnode's WiFi password
     secret: true
     required: true
     pattern: "^.{8,63}$"
@@ -25,7 +25,7 @@ fields:
       name: ADVANCED_OPTIONS
     title: Advanced Options
     description: >-
-      Select yes to configure advanced options
+      Ony select yes if you need to configure advanced options like Channel or NAT (not recommended)
     enum:
       - no
       - yes
@@ -35,7 +35,7 @@ fields:
       name: CHANNEL
     title: WIFI CHANNEL
     description: >-
-      Variable to configure your wifi channel
+      Configure your WLAN channel
     required: true
     if: { "advanced": { "enum": ["yes"] } }
   - id: nat
@@ -44,6 +44,6 @@ fields:
       name: NAT
     title: NAT
     description: >-
-      Variable to configure the WIFI as NAT
+      Configure WIFI as NAT
     required: true
     if: { "advanced": { "enum": ["yes"] } }
