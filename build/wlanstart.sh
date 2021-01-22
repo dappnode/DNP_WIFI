@@ -26,8 +26,8 @@ if [ -z ${INTERFACE} ]; then
 fi
 
 if [ -z ${INTERFACE} ]; then
-  echo "[Warning] No interface found. Entering sleep mode."
-  while true; do sleep 1; done
+  echo "[Warning] No interface found."
+  exit 0
 fi
 
 # Not all the WIFI drivers are compatilbe with [SHORT-GI-20] (e.g., RaspberryPi 4)
@@ -44,8 +44,8 @@ if [ ${IFACE_OPSTATE::-1} = "down" ]; then
   ip link set ${INTERFACE} name wlan0
   INTERFACE=wlan0
 else
-  echo "[Warning] Interface ${INTERFACE} already connected. Entering sleep mode."
-  while true; do sleep 1; done
+  echo "[Warning] Interface ${INTERFACE} already connected. WIFI hotspot cannot be initialized since the host machine is using it"
+  exit 0
 fi
 
 if [ ! -f "/etc/hostapd.conf" ]; then
