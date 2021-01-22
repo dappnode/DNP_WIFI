@@ -25,10 +25,15 @@ if [ -z ${INTERFACE} ]; then
   INTERFACE=$(docker run -t --privileged --net=host --pid=host --rm --entrypoint /bin/sh ${CONTAINER_IMAGE} -c "iw dev" | grep 'Interface' | awk 'NR==1{print $2}')
 fi
 
-if [ -z ${INTERFACE} ]; then
-  echo "[Warning] No interface found."
-  exit 0
-fi
+# We have seen cases in which after an update it is not able to obtain the interface
+# it may be because the previous container has not had time to release the interface
+# This adds a one minute wait before stopping for not finding an interface
+while [ -z ${INTERFACE} ]
+do
+    echo "Waiting for WIFI interface..."
+    ((COUNT++)) && ((COUNT==10)) && echo "[Warning] No interface found after 60s, stopping gracefully" && exit 0
+    sleep 6
+done
 
 # Not all the WIFI drivers are compatilbe with [SHORT-GI-20] (e.g., RaspberryPi 4)
 # So we need to check it before add it
@@ -126,4 +131,4 @@ dhcpd ${INTERFACE}
 
 echo "Starting HostAP daemon ..."
 cat /etc/hostapd.conf
-/usr/sbin/hostapd /etc/hostapd.conf 
+/usr/sbin/hostapd /etc/hostapd.conf
