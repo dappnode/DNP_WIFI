@@ -4,7 +4,7 @@ fields:
     target:
       type: environment
       name: SSID
-    title: WiFi Network Name (WIFI SSID)
+    title: WiFi Network Name (WIFI SSID). Once you change it you will be disconnected and will have to connect again with the new password. You might have to wait a couple of minutes.
     description: >-
       Name of your DAppNode's WiFi Hotspot network
     required: true
@@ -14,7 +14,7 @@ fields:
       name: WPA_PASSPHRASE
     title: Password
     description: >-
-      Set your dappnode's WiFi password
+      Set your dappnode's WiFi password. Once you change it you will be disconnected and will have to connect again with the new password. You might have to wait a couple of minutes.
     secret: true
     required: true
     pattern: "^.{8,63}$"
