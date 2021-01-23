@@ -17,16 +17,7 @@ true ${CHANNEL:=11}
 true ${WPA_PASSPHRASE:=dappnode}
 true ${HW_MODE:=g}
 true ${DRIVER:=nl80211}
-true ${HT_CAPAB:=[HT40-][SHORT-GI-20][SHORT-GI-40]}
-true ${MODE:=admin}
-
-# Attach interface to container in guest mode
-# This will force NAT to be disabled!
-if [ "$MODE" == "guest"  ]; then
-  SUBNET=172.33.100.0
-  AP_ADDR=172.33.100.254
-  NAT=false
-fi
+true ${HT_CAPAB:=[HT40-][SHORT-GI-20]}
 
 CONTAINER_PID=$(docker inspect -f '{{.State.Pid}}' ${HOSTNAME})
 CONTAINER_IMAGE=$(docker inspect -f '{{.Config.Image}}' ${HOSTNAME})
@@ -34,10 +25,20 @@ if [ -z ${INTERFACE} ]; then
   INTERFACE=$(docker run -t --privileged --net=host --pid=host --rm --entrypoint /bin/sh ${CONTAINER_IMAGE} -c "iw dev" | grep 'Interface' | awk 'NR==1{print $2}')
 fi
 
-if [ -z ${INTERFACE} ]; then
-  echo "[Warning] No interface found. Entering sleep mode."
-  while true; do sleep 1; done
-fi
+# We have seen cases in which after an update it is not able to obtain the interface
+# it may be because the previous container has not had time to release the interface
+# This adds a one minute wait before stopping for not finding an interface
+while [ -z ${INTERFACE} ]
+do
+    echo "Waiting for WIFI interface..."
+    ((COUNT++)) && ((COUNT==10)) && echo "[Warning] No interface found after 60s, stopping gracefully" && exit 0
+    sleep 6
+done
+
+# Not all the WIFI drivers are compatilbe with [SHORT-GI-20] (e.g., RaspberryPi 4)
+# So we need to check it before add it
+CHECK_CAPAB=$(docker run -t --privileged --net=host --pid=host --rm --entrypoint /bin/sh ${CONTAINER_IMAGE} -c "iw list" | grep -q 'short GI for 40 MHz' && echo '[SHORT-GI-20]' || echo '' )
+HT_CAPAB="${HT_CAPAB}${CHECK_CAPAB}"
 
 echo "Attaching interface ${INTERFACE} to container"
 IFACE_OPSTATE=$(docker run -t --privileged --net=host --pid=host --rm --entrypoint /bin/sh ${CONTAINER_IMAGE} -c "cat /sys/class/net/${INTERFACE}/operstate")
@@ -48,8 +49,8 @@ if [ ${IFACE_OPSTATE::-1} = "down" ]; then
   ip link set ${INTERFACE} name wlan0
   INTERFACE=wlan0
 else
-  echo "[Warning] Interface ${INTERFACE} already connected. Entering sleep mode."
-  while true; do sleep 1; done
+  echo "[Warning] Interface ${INTERFACE} already connected. WIFI hotspot cannot be initialized since the host machine is using it"
+  exit 0
 fi
 
 if [ ! -f "/etc/hostapd.conf" ]; then
@@ -62,8 +63,6 @@ channel=${CHANNEL}
 wpa=2
 wpa_passphrase=${WPA_PASSPHRASE}
 wpa_key_mgmt=WPA-PSK
-# TKIP is no secure anymore
-#wpa_pairwise=TKIP CCMP
 wpa_pairwise=CCMP
 rsn_pairwise=CCMP
 wpa_ptk_rekey=600
@@ -132,4 +131,4 @@ dhcpd ${INTERFACE}
 
 echo "Starting HostAP daemon ..."
 cat /etc/hostapd.conf
-/usr/sbin/hostapd /etc/hostapd.conf 
+/usr/sbin/hostapd /etc/hostapd.conf

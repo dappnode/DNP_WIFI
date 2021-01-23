@@ -17,11 +17,12 @@ services:
       - CHANNEL=11
       - MODE=admin
       - INTERFACE
+      - ADVANCED_OPTIONS=no
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock"
     dns: 172.33.1.2
     privileged: true
-    restart: unless-stopped
+    restart: on-failure
     networks:
       network:
         ipv4_address: 172.33.1.10
