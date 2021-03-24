@@ -1,10 +1,8 @@
 version: "3.4"
 networks:
-  network:
-    driver: bridge
-    ipam:
-      config:
-        - subnet: 172.33.0.0/16
+  dncore_network:
+    name: dncore_network
+    external: true
 services:
   wifi.dnp.dappnode.eth:
     build: ./build
@@ -24,7 +22,9 @@ services:
     privileged: true
     restart: on-failure
     networks:
-      network:
+      dncore_network:
         ipv4_address: 172.33.1.10
+        aliases:
+          - wifi.dappnode
     logging:
       driver: journald
