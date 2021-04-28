@@ -50,7 +50,8 @@ if [ ${IFACE_OPSTATE::-1} = "down" ]; then
   INTERFACE=wlan0
 else
   echo "[Warning] Interface ${INTERFACE} already connected. WIFI hotspot cannot be initialized since the host machine is using it"
-  exit 0
+  sleep 10
+  exit 1
 fi
 
 if [ ! -f "/etc/hostapd.conf" ]; then
