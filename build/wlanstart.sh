@@ -23,6 +23,10 @@ CONTAINER_PID=$(docker inspect -f '{{.State.Pid}}' ${HOSTNAME})
 CONTAINER_IMAGE=$(docker inspect -f '{{.Config.Image}}' ${HOSTNAME})
 if [ -z ${INTERFACE} ]; then
   INTERFACE=$(docker run -t --privileged --net=host --pid=host --rm --entrypoint /bin/sh ${CONTAINER_IMAGE} -c "iw dev" | grep 'Interface' | awk 'NR==1{print $2}')
+  # Additional method to get network interface
+  if [ -z ${INTERFACE} ]; then
+    INTERFACE=$(docker run -t --privileged --net=host --pid=host --rm --entrypoint /bin/sh ${CONTAINER_IMAGE} -c "ls /sys/class/ieee80211/*/device/net")
+  fi
 fi
 
 # We have seen cases in which after an update it is not able to obtain the interface
@@ -50,7 +54,8 @@ if [ ${IFACE_OPSTATE::-1} = "down" ]; then
   INTERFACE=wlan0
 else
   echo "[Warning] Interface ${INTERFACE} already connected. WIFI hotspot cannot be initialized since the host machine is using it"
-  exit 0
+  sleep 10
+  exit 1
 fi
 
 if [ ! -f "/etc/hostapd.conf" ]; then

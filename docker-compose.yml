@@ -20,7 +20,7 @@ services:
       - "/var/run/docker.sock:/var/run/docker.sock"
     dns: 172.33.1.2
     privileged: true
-    restart: on-failure
+    restart: unless-stopped
     networks:
       dncore_network:
         ipv4_address: 172.33.1.10
