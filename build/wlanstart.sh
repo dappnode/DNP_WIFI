@@ -17,8 +17,9 @@ cleanup () {
   echo "[*] Deleting iptables rules..."
   sh /bin/iptables_off.sh || echo "[-] Error deleting iptables rules"
   echo "[*] Restarting network interface..."
-  ifdown wlan0
-  ifup wlan0
+  # No such file or directory: /etc/network/interfaces
+  #ifdown wlan0
+  #ifup wlan0
   echo "[+] Successfully exited, byebye! "
 }
 
