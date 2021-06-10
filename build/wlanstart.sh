@@ -1,10 +1,39 @@
-#!/bin/bash -e
+#!/usr/bin/env bash
+
+####################
+#SIGNALS CONTROLLER#
+####################
+
+pid=0
+
+sigterm_handler () {
+  echo -e "[*] Caught SIGTERM/SIGINT!"
+  pkill hostapd
+  cleanup
+  exit 0
+}
+
+cleanup () {
+  echo "[*] Deleting iptables rules..."
+  sh /bin/iptables_off.sh || echo "[-] Error deleting iptables rules"
+  echo "[*] Restarting network interface..."
+  # No such file or directory: /etc/network/interfaces
+  #ifdown wlan0
+  #ifup wlan0
+  echo "[+] Successfully exited, byebye! "
+}
+
+trap 'sigterm_handler' TERM INT
 
 # Check if running in privileged mode
 if [ ! -w "/sys" ] ; then
     echo "[Error] Not running in privileged mode."
     exit 1
 fi
+
+###########
+#VARIABLES#
+###########
 
 # Default values
 true ${SUBNET:=172.33.12.0}
@@ -21,6 +50,11 @@ true ${HT_CAPAB:=[HT40-][SHORT-GI-20]}
 
 CONTAINER_PID=$(docker inspect -f '{{.State.Pid}}' ${HOSTNAME})
 CONTAINER_IMAGE=$(docker inspect -f '{{.Config.Image}}' ${HOSTNAME})
+
+###########
+#INTERFACE#
+###########
+
 if [ -z ${INTERFACE} ]; then
   INTERFACE=$(docker run -t --privileged --net=host --pid=host --rm --entrypoint /bin/sh ${CONTAINER_IMAGE} -c "iw dev" | grep 'Interface' | awk 'NR==1{print $2}')
   # Additional method to get network interface
@@ -58,6 +92,10 @@ else
   exit 1
 fi
 
+#########
+#HOSTPAD#
+#########
+
 if [ ! -f "/etc/hostapd.conf" ]; then
     cat > "/etc/hostapd.conf" <<EOF
 interface=${INTERFACE}
@@ -77,6 +115,10 @@ wmm_enabled=1
 EOF
 
 fi
+
+#######
+#SETUP#
+#######
 
 # unblock wlan
 rfkill unblock wlan
@@ -107,19 +149,6 @@ if [ $NAT != 'true' ]; then
   echo 1 > /proc/sys/net/ipv4/conf/all/proxy_arp
 fi
 
-if [ "${OUTGOINGS}" ] ; then
-   ints="$(sed 's/,\+/ /g' <<<"${OUTGOINGS}")"
-   for int in ${ints}
-   do
-      echo "Setting iptables for outgoing traffics on ${int}..."
-      iptables -t nat -D POSTROUTING -s ${SUBNET}/24 -o ${int} -j MASQUERADE > /dev/null 2>&1 || true
-      iptables -t nat -A POSTROUTING -s ${SUBNET}/24 -o ${int} -j MASQUERADE
-   done
-elif [ $NAT = 'true' ]; then
-   echo "Setting iptables for outgoing traffics on all interfaces..."
-   iptables -t nat -D POSTROUTING -s ${SUBNET}/24 -j MASQUERADE > /dev/null 2>&1 || true
-   iptables -t nat -A POSTROUTING -s ${SUBNET}/24 -j MASQUERADE
-fi
 
 echo "Configuring DHCP server .."
 cat > "/etc/dhcp/dhcpd.conf" <<EOF
@@ -131,9 +160,14 @@ subnet ${SUBNET} netmask 255.255.255.0 {
 }
 EOF
 
-echo "Starting DHCP server .." 
-dhcpd ${INTERFACE}
+echo "[*] Creating iptables rules"
+sh /bin/iptables.sh || echo "[-] Error creating iptables rules"
 
+# Execute dhcpd in background
+echo "Starting DHCP server .." 
+dhcpd ${INTERFACE} & 
+
+# Execute HostAP in background and  wait for it. NOT CHANGE
 echo "Starting HostAP daemon ..."
 cat /etc/hostapd.conf
-/usr/sbin/hostapd /etc/hostapd.conf
+/usr/sbin/hostapd /etc/hostapd.conf & wait ${!} 

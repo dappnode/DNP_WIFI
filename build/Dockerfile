@@ -2,7 +2,9 @@ FROM alpine
 
 RUN apk add --no-cache bash hostapd iptables dhcp docker iproute2 iw
 RUN echo "" > /var/lib/dhcp/dhcpd.leases
-ADD wlanstart.sh /bin/wlanstart.sh
-RUN chmod +x /bin/wlanstart.sh
+COPY ./*.sh /bin/
+RUN chmod +x /bin/wlanstart.sh && \
+    chmod +x /bin/iptables.sh && \
+    chmod +x /bin/iptables_off.sh 
 
 ENTRYPOINT [ "/bin/wlanstart.sh" ]
