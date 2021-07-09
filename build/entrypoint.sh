@@ -146,6 +146,11 @@ function get_phy {
     echo -e "${BLUE}[INFO]${NC} Physical network device detected: ${PHY}"
 }
 
+# Link physical network device to container
+function phy_setup {
+    docker run -t --privileged --net=host --pid=host --rm --entrypoint /bin/sh ${CONTAINER_IMAGE} -c "iw phy ${PHY} set netns ${CONTAINER_PID}"
+}
+
 # Create hostapd.conf && restart hostapd.service if needed
 function hostapd_setup {
     # Create hostapd.conf file ht_capab=${HT_CAPAB}?
@@ -240,6 +245,7 @@ trap 'sigterm_handler' TERM INT
 
 print_banner
 get_interface
-interface_setup
 get_phy
+phy_setup
+interface_setup
 service_start
