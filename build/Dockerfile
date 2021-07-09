@@ -3,7 +3,7 @@ FROM alpine
 # Update the repos
 RUN apk update && apk upgrade
 # Install libraries
-RUN apk add --no-cache hostapd dnsmasq bash bridge-utils iw openrc
+RUN apk add --no-cache hostapd dnsmasq bash bridge-utils iw openrc docker iproute2
 # Make hostapd and dnsmasq to run on startup
 RUN rc-update add hostapd && rc-update add dnsmasq
 # Entrypoint executable

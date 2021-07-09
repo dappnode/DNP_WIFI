@@ -46,7 +46,7 @@
 ########
 
 # Colors
-YELLOW'\e[0;33m'
+YELLOW='\e[0;33m'
 MAGENTA='\e[0;35m'
 RED='\e[0;31m'
 GREEN='\e[0;32m'
@@ -120,8 +120,7 @@ function get_interface {
     echo -e "${BLUE}[INFO]${NC} Interface found: ${INTERFACE}"
 }
 
-
-# Check that the interface exists and its not in use. Returns interface phy
+# Set up interface in container
 function interface_setup {
     # Check interface exists in /sys/class/net/$INTERFACE
     INTERFACE_EXISTS=$(${NSENTER_COMMAND} test -- -d /sys/class/net/${INTERFACE} && echo true || echo false)
@@ -133,11 +132,12 @@ function interface_setup {
     INTERFACE_DEFAULT_HOST=$(${NSENTER_COMMAND} ip r | grep default | cut -d " " -f5)
 
     # Unblock default network interface, if its in use by the host it may loose internet connection
-    [ $INTERFACE == $INTERFACE_DEFAULT_HOST ] && echo -e "${BLUE}[INFO]${NC} The selected interface is configured as the default route, attemping to unblock it" && ${NSENTER_COMMAND} rfkill unblock wifi
+    [ $INTERFACE == $INTERFACE_DEFAULT_HOST ] && echo -e "${YELLOW}[WARNING]${NC} The selected interface is configured as the default route, attemping to unblock it" && ${NSENTER_COMMAND} rfkill unblock wifi
     echo -e "${BLUE}[INFO]${NC} Starting interface ${INTERFACE}"
     ip link set "$INTERFACE" up
 }
 
+# get physical network device from host
 function get_phy {
     # Assign name of phy if exists, otherwhise empty value
     PHY=$(docker run -t --privileged --net=host --pid=host --rm --entrypoint /bin/sh ${CONTAINER_IMAGE} -c "test -f /sys/class/net/${INTERFACE}/phy80211/name && cat /sys/class/net/wlan0/phy80211/name || echo ''")
@@ -146,6 +146,7 @@ function get_phy {
     echo -e "${BLUE}[INFO]${NC} Physical network device detected: ${PHY}"
 }
 
+# Create hostapd.conf && restart hostapd.service if needed
 function hostapd_setup {
     # Create hostapd.conf file ht_capab=${HT_CAPAB}?
     if grep -Fxq "DAPPNODE" /etc/hostapd.conf
@@ -174,6 +175,7 @@ EOF
     
 }
 
+# Create dnsmasq.conf && restart dnsmasq.service if needed
 function dnsmasq_setup {
     # Create dnsmasq.conf
     if grep -Fxq "DAPPNODE" my_list.txt
