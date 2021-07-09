@@ -27,23 +27,19 @@
 # Other:
 #   - networkManager (allow to easily create wifi hostpot on host): https://wiki.debian.org/NetworkManager
 
-# LEARNING
-#   - 
-
 # DEBUG: docker run -it --privileged --net=host --pid=host --entrypoint /bin/sh wifi.dnp.dappnode.eth:0.2.7  
 
-# The current flow is: the wifi container uses the eth0 interface which is routed to a network interface to create the wifi hostpor
-# Resarch on how to sustitute the eth0 wired interface by a wireless interface
+# TODO: Resarch on how to sustitute the eth0 wired interface by a wireless interface
 
-# ROADMAP
-# 0. Start entrypoint with services start: dnsmasq && hostapd 
+# FLOW
+# 0. Main services to run on wifi container: dnsmasq && hostapd. 
 # 1. Assign default wlan values to variables if does not exist
-# 2. Get wireless interface name
-# 3. Check: wireless interface available && not in use by the host
-# 4. Get PHYsical interface for the wireless interface
-# 3. Unblock wifi && bring the wireless interface up
-# 4. Edit hostapd.conf && Edit dnmasq.conf?
-# 5. Start hostapd and 
+# 2. Get network interface && check requirements && link to container && up
+# 3. Get PHYsical interface && check requirements && link to container && up
+# 4. Set rules netns
+# 5. If hostapd and dnsmasq files not edited, edit config files and reload services
+# 6. Entrypoint waiting forever
+
 
 ########
 # VARS #
@@ -61,14 +57,15 @@ ARCH=$(arch)
 
 # WLAN parameters
 WPA_MODE="WPA-PSK"
+SSID="${SSID:=DAppNodeWIFI}"
 SUBNET="${SUBNET:=172.33.12.0}"
 AP_ADDR="${AP_ADDR:=172.33.12.254}"
 DNS="${DNS:=172.33.1.2}"
 NAT="${NAT:=true}"
-INTERFACE="${INTERFACE:=}"                                  X             
-CHANNEL="${CHANNEL:=11}"                            X
-PASSPHRASE="${PASSPHRASE:=dappnode}"                X
-HW_MODE="${HW_MODE:=g}"                             X
+INTERFACE="${INTERFACE:=}"
+CHANNEL="${CHANNEL:=11}"
+WPA_PASSPHRASE="${WPA_PASSPHRASE:=dappnode}"                
+HW_MODE="${HW_MODE:=g}"
 DRIVER="${DRIVER:=nl80211}"
 HT_CAPAB="${HT_CAPAB:=[HT40-][SHORT-GI-20]}"
 
@@ -126,9 +123,6 @@ function get_interface {
 
 # Check that the interface exists and its not in use. Returns interface phy
 function interface_setup {
-    # get interface, otherwise exit
-    get_interface
-
     # Check interface exists in /sys/class/net/$INTERFACE
     INTERFACE_EXISTS=$(${NSENTER_COMMAND} test -- -d /sys/class/net/${INTERFACE} && echo true || echo false)
     [ ${INTERFACE_EXISTS} == "false" ] && echo -e "${RED}[ERROR]${NC} Interface ${INTERFACE} not detected on the host. Exiting..." && exit 1
@@ -152,31 +146,14 @@ function get_phy {
     echo -e "${BLUE}[INFO]${NC} Physical network device detected: ${PHY}"
 }
 
-function service_start {
-    # 1. Assign phy wireless interface to the container 
-    # 2. Assign an IP to the wifi interface
-    # 3. iptables rules for NAT
-    # 4. Enable IP forwarding
-    docker run -t --privileged --net=host --pid=host --rm --entrypoint /bin/sh ${CONTAINER_IMAGE} -c "
-        iw phy ${PHY} set netns ${CONTAINER_PID} 
-        ip netns exec ${CONTAINER_PID} ip addr flush dev ${INTERFACE}
-        ip netns exec ${CONTAINER_PID} ip link set ${INTERFACE} up
-        ip netns exec ${CONTAINER_PID} ip addr add ${IP_AP}${NETMASK} dev ${INTERFACE}
-        ip netns exec ${CONTAINER_PID} ip addr flush dev ${INTERFACE}
-        ip netns exec ${CONTAINER_PID} ip link set ${INTERFACE} up
-        ip netns exec ${CONTAINER_PID} ip addr add ${IP_AP$NETMASK} dev ${INTERFACE}
-        ip netns exec ${CONTAINER_PID} iptables -t nat -A POSTROUTING -s ${SUBNET}.0${NETMASK} ! -d ${SUBNET}.0${NETMASK} -j MASQUERADE
-        ip netns exec ${CONTAINER_PID} echo 1 > /proc/sys/net/ipv4/ip_forward"
-}
-
 function hostapd_setup {
     # Create hostapd.conf file ht_capab=${HT_CAPAB}?
-    if grep -Fxq "DAPPNODE" my_list.txt
+    if grep -Fxq "DAPPNODE" /etc/hostapd.conf
         then
             echo -e "${BLUE}[INFO]${NC} hostapd.conf already configured"
         else
             echo -e "${BLUE}[INFO]${NC} Configuring hostapd.conf..."
-                cat > "/etc/hostapd.conf" <<EOF
+                cat > "/etc/hostapd/hostapd.conf" <<EOF
 # DAPPNODE
 interface=${INTERFACE}
 driver=${DRIVER}
@@ -198,7 +175,7 @@ EOF
 }
 
 function dnsmasq_setup {
-    # Create hostapd.conf file ht_capab=${HT_CAPAB}?
+    # Create dnsmasq.conf
     if grep -Fxq "DAPPNODE" my_list.txt
         then
             echo -e "${BLUE}[INFO]${NC} dnsmasq.conf already configured"
@@ -216,29 +193,51 @@ EOF
     fi
 }
 
+function service_start {
+    # 1. Assign phy wireless interface to the container 
+    # 2. Assign an IP to the wifi interface
+    # 3. iptables rules for NAT
+    # 4. Enable IP forwarding
+    docker run -t --privileged --net=host --pid=host --rm --entrypoint /bin/sh ${CONTAINER_IMAGE} -c "
+        iw phy ${PHY} set netns ${CONTAINER_PID} 
+        ip netns exec ${CONTAINER_PID} ip addr flush dev ${INTERFACE}
+        ip netns exec ${CONTAINER_PID} ip link set ${INTERFACE} up
+        ip netns exec ${CONTAINER_PID} ip addr add ${IP_AP}${NETMASK} dev ${INTERFACE}
+        ip netns exec ${CONTAINER_PID} ip addr flush dev ${INTERFACE}
+        ip netns exec ${CONTAINER_PID} ip link set ${INTERFACE} up
+        ip netns exec ${CONTAINER_PID} ip addr add ${IP_AP$NETMASK} dev ${INTERFACE}
+        ip netns exec ${CONTAINER_PID} iptables -t nat -A POSTROUTING -s ${SUBNET}.0${NETMASK} ! -d ${SUBNET}.0${NETMASK} -j MASQUERADE
+        ip netns exec ${CONTAINER_PID} echo 1 > /proc/sys/net/ipv4/ip_forward"
+
+    # If needed: edit and reload hostapd and dnsmasq
+    hostapd_setup
+    dnsmasq_setup
+}
+
+function service_stop {
+    # Remove ip address
+    docker run -t --privileged --net=host --pid=host --rm --entrypoint /bin/sh ${CONTAINER_IMAGE} -c "ip addr del ${IP_AP}${NETMASK} dev ${INTERFACE} > /dev/null 2>&1"
+}
+
 ###########
 # HANDLER #
 ###########
 
-# STOP CONTAINER:
-pid=0
-
 sigterm_handler () {
-  echo -e "[*] Caught SIGTERM/SIGINT!"
-    if [[ -z "$2" ]]; then
-        echo -e "${RED}[ERROR]${NC} No interface found. Exiting..."
-        exit 1
-    fi
-    IFACE=${2}
-    service_stop "$IFACE"
-    clear
+  echo -e "${BLUE}[INFO]${NC} Caught singal. Stopping wifi service gracefully"
+  service_stop
+  #clear
   exit 0
 }
 
 trap 'sigterm_handler' TERM INT
+ 
+########
+# MAIN #
+########
 
-# 1. get interface
-# 2. get phy
-# 3. unblock wifi
-# 4. link iface up
-# 
+print_banner
+get_interface
+interface_setup
+get_phy
+service_start
