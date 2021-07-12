@@ -233,6 +233,8 @@ function service_start {
 function service_stop {
     # Remove ip address
     docker run -t --privileged --net=host --pid=host --rm --entrypoint /bin/sh ${CONTAINER_IMAGE} -c "ip addr del ${AP_ADDR}${NETMASK} dev ${INTERFACE} > /dev/null 2>&1"
+    pkill hostapd
+    pkill dnsmasq
 }
 
 ###########
