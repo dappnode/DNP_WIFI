@@ -67,9 +67,7 @@ CHANNEL="${CHANNEL:=11}"
 WPA_PASSPHRASE="${WPA_PASSPHRASE:=dappnode}"                
 HW_MODE="${HW_MODE:=g}"
 DRIVER="${DRIVER:=nl80211}"
-HT_CAPAB="${HT_CAPAB:=[HT40-][SHORT-GI-20]}"
-IP_AP="${IP_AP:=nl80211}"
-NETMASK="${NETMASK:=/24}"
+#HT_CAPAB="${HT_CAPAB:=[HT40-][SHORT-GI-20]}"
 
 # Docker
 CONTAINER_PID=$(docker inspect -f '{{.State.Pid}}' ${HOSTNAME})
@@ -154,10 +152,10 @@ function phy_setup {
     docker run -t --privileged --net=host --pid=host --rm --entrypoint /bin/sh ${CONTAINER_IMAGE} -c "iw phy ${PHY} set netns ${CONTAINER_PID}"
 }
 
-# Create hostapd.conf && restart hostapd.service if needed
+# Create hostapd.conf
 function hostapd_setup {
     # Create hostapd.conf file ht_capab=${HT_CAPAB}?
-    if grep -Fxq "DAPPNODE" /etc/hostapd.conf
+    if grep -Fxq "DAPPNODE" /etc/hostapd/hostapd.conf
         then
             echo -e "${BLUE}[INFO]${NC} hostapd.conf already configured"
         else
@@ -180,14 +178,12 @@ wmm_enabled=1
 EOF
     # rc-service hostapd start
     fi
-    echo -e "${BLUE}[INFO]${NC} Starting hostapd"
-    /usr/sbin/hostapd & 
 }
 
-# Create dnsmasq.conf && restart dnsmasq.service if needed
+# Create dnsmasq.conf
 function dnsmasq_setup {
     # Create dnsmasq.conf
-    if grep -Fxq "DAPPNODE" my_list.txt
+    if grep -Fxq "DAPPNODE" /etc/dnsmasq.conf
         then
             echo -e "${BLUE}[INFO]${NC} dnsmasq.conf already configured"
         else
@@ -198,41 +194,46 @@ no-resolv
 server=${DNS_SERVER}
 interface=lo,${INTERFACE}
 no-dhcp-interface=lo
-dhcp-range=${SUBNET}.20,${SUBNET}.254,255.255.255.0,12h
+dhcp-range=${SUBNET::-1}100,${SUBNET::-1}253,255.255.255.0,12h
 EOF
         # rc-service dnsmasq start
     fi
-    echo -e "${BLUE}[INFO]${NC} Starting dnsmasq"
-    /usr/sbin/dnsmasq & wait ${!} 
 }
 
 function ip_forward {
     # IP forwarding
-    echo "Enabling ip_dynaddr, ip_forward"
+    echo -e "${BLUE}[INFO]${NC} Enabling ip_dynaddr, ip_forward"
     for i in ip_dynaddr ip_forward ; do 
         if [ $(cat /proc/sys/net/ipv4/$i) ]; then
             echo -e "${BLUE}[INFO]${NC} $i already 1"
-            echo $i already 1 
         else
             echo "1" > /proc/sys/net/ipv4/$i
         fi
     done
 }
 
-function service_start {
-    ip addr flush dev ${INTERFACE}
-    ip addr add ${AP_ADDR}${NETMASK} dev ${INTERFACE}
-    iptables -t nat -A POSTROUTING -s ${SUBNET}.0${NETMASK} ! -d ${SUBNET}.0${NETMASK} -j MASQUERADE
+function ip_setup {
+    ip addr flush dev "${INTERFACE}"
+    ip addr add "${AP_ADDR}/24" dev "${INTERFACE}"
     ip_forward
+    iptables -t nat -A POSTROUTING -s "${SUBNET}/24" ! -d "${SUBNET}/24" -j MASQUERADE
+}
 
-    # If needed: edit and reload hostapd and dnsmasq
+# Execute binaries for hostapd and dnsmasq, do not change the current order of execution. Another approach would be to use them as services and execute them on startup (check Dockerfile comment)
+function service_start {
+    # Setup config files
     hostapd_setup
     dnsmasq_setup
+    # Start process in bacground and wait
+    echo -e "${BLUE}[INFO]${NC} Starting dnsmasq"
+    dnsmasq & 
+    echo -e "${BLUE}[INFO]${NC} Starting hostapd"
+    hostapd /etc/hostapd/hostapd.conf & wait ${!} 
 }
 
 function service_stop {
     # Remove ip address
-    docker run -t --privileged --net=host --pid=host --rm --entrypoint /bin/sh ${CONTAINER_IMAGE} -c "ip addr del ${AP_ADDR}${NETMASK} dev ${INTERFACE} > /dev/null 2>&1"
+    docker run -t --privileged --net=host --pid=host --rm --entrypoint /bin/sh ${CONTAINER_IMAGE} -c "ip addr del ${AP_ADDR}/24 dev ${INTERFACE} > /dev/null 2>&1"
     pkill hostapd
     pkill dnsmasq
 }
@@ -244,7 +245,7 @@ function service_stop {
 sigterm_handler () {
   echo -e "${BLUE}[INFO]${NC} Caught singal. Stopping wifi service gracefully"
   service_stop
-  #clear
+  clear
   exit 0
 }
 
@@ -259,4 +260,5 @@ get_interface
 get_phy
 phy_setup
 interface_setup
+ip_setup
 service_start
