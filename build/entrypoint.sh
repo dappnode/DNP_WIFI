@@ -72,7 +72,7 @@ DRIVER="${DRIVER:=nl80211}"
 # Docker
 CONTAINER_PID=$(docker inspect -f '{{.State.Pid}}' ${HOSTNAME})
 CONTAINER_IMAGE=$(docker inspect -f '{{.Config.Image}}' ${HOSTNAME})
-NSENTER_COMMAND="docker run --rm --privileged --pid=host -t alpine:3.8 nsenter -t 1 -m -u -n -i"
+CONTAINER_COMMAND="docker run -t --privileged --net=host --pid=host --rm --entrypoint /bin/sh ${CONTAINER_IMAGE} -c"
 
 ################
 # REQUIREMENTS #
@@ -102,26 +102,33 @@ print_banner () {
 
 # Get host interface: WARNING! host network interface may disappear for a while and not exist for up to 2 minutes
 function get_interface {
-    # 1, Get interface
-    # iw dev returns empty value if does not exist
-    INTERFACE=$(docker run -t --privileged --net=host --pid=host --rm --entrypoint /bin/sh ${CONTAINER_IMAGE} -c "iw dev" | grep 'Interface' | awk 'NR==1{print $2}')
+    # 1, Get interface name from host
+    INTERFACE=$(${CONTAINER_COMMAND} "iw dev" | grep 'Interface' | awk 'NR==1{print $2}')
     while [ -z ${INTERFACE} ]; do
         echo "Waiting for WIFI interface..."
         ((COUNT++)) && ((COUNT==20)) && echo -e "${YELLOW}[WARNING]${NC} No interface found after 120s, stopping gracefully" && exit 0
         sleep 6
-        INTERFACE=$(docker run -t --privileged --net=host --pid=host --rm --entrypoint /bin/sh ${CONTAINER_IMAGE} -c "iw dev" | grep 'Interface' | awk 'NR==1{print $2}')
+        # iw dev returns empty value if interface not present
+        INTERFACE=$(${CONTAINER_COMMAND} "iw dev" | grep 'Interface' | awk 'NR==1{print $2}')
     done
     echo -e "${BLUE}[INFO]${NC} Interface found: ${INTERFACE}"
 
-    # 2. double-Check interface exists in /sys/class/net/$INTERFACE
-    INTERFACE_EXISTS=$(${NSENTER_COMMAND} test -- -d /sys/class/net/${INTERFACE} && echo true || echo false)
-    [ ${INTERFACE_EXISTS} == "false" ] && echo -e "${RED}[ERROR]${NC} Interface ${INTERFACE} not detected on the host. Exiting..."
+    # 2. Double check interface exists on host
+    INTERFACE_EXISTS=$(${CONTAINER_COMMAND} "test -- -d /sys/class/net/${INTERFACE} && echo true || echo false")
+    [ "$INTERFACE_EXISTS" == "false" ] && echo -e "${RED}[ERROR]${NC} Interface ${INTERFACE} not detected on the host"
     echo -e "${BLUE}[INFO]${NC} Interface ${INTERFACE} successfully detected on host"
    
-    # 3. Check if is in used by the host
-    INTERFACE_DEFAULT_HOST=$(docker run -t --privileged --net=host --pid=host --rm --entrypoint /bin/sh ${CONTAINER_IMAGE} -c "ip r" | grep default | cut -d " " -f5)
+    # 3. Check if interface blocked
+    # Example output:  "0 wlan      phy0   unblocked unblocked"
+    INTERFACE_BLOCKED=$(${CONTAINER_COMMAND} "rfkill | grep wlan")
+    # "Soft blocked" means "blocked by software"
+    INTERFACE_SOFT_BLOCKED=$(echo ${INTERFACE_BLOCKED} | awk '{print $4}')
+    # "Hard blocked" cannot be changed by software, may need a reboot
+    INTERFACE_HARD_BLOCKED=$(echo ${INTERFACE_BLOCKED} | awk '{print $5}')
+    # Exit if interface hard blocked
+    [ "$INTERFACE_HARD_BLOCKED" == "blocked" ] && echo -e "${RED}[ERROR]${NC} The selected interface is hard blocked on the host, a reboot may be necessary. Stopping gracefully" && exit 0
     # Unblock default network interface, if its in use by the host it may loose internet connection
-    [ $INTERFACE == $INTERFACE_DEFAULT_HOST ] && echo -e "${YELLOW}[WARNING]${NC} The selected interface is configured as the default route, attemping to unblock it" && $(${NSENTER_COMMAND} rfkill unblock wifi)
+    [ "$INTERFACE_SOFT_BLOCKED" == "blocked" ] && echo -e "${YELLOW}[WARNING]${NC} The selected interface is soft blocked on the host, attemping to unblock it..." && $(${CONTAINER_COMMAND} "rfkill unblock wifi")
 }
 
 # Set up interface in container
@@ -133,7 +140,7 @@ function interface_setup {
 # get physical network device from host
 function get_phy {
     # Assign name of phy if exists, otherwhise empty value
-    PHY_OUTPUT=$(docker run -t --privileged --net=host --pid=host --rm --entrypoint /bin/bash ${CONTAINER_IMAGE} -c "test -f /sys/class/net/${INTERFACE}/phy80211/name && cat /sys/class/net/wlan0/phy80211/name || echo ''")
+    PHY_OUTPUT=$(${CONTAINER_COMMAND} "test -f /sys/class/net/${INTERFACE}/phy80211/name && cat /sys/class/net/${INTERFACE}/phy80211/name || echo ''")
     # Clean PHY_OUTPUT: It may have escape chars \n
     PHY=${PHY_OUTPUT//[$'\t\r\n ']}
     # Exit if PHY is empty
