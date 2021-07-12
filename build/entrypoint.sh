@@ -17,7 +17,7 @@
 #   - docs: https://wiki.debian.org/hostap
 
 # ip: toolf for wired devices. Substitutes ifconfig
-#   - docs: https://linux.die.net/man/8/ip
+#   - docs: https://linux.die.net/man/8/ip  https://access.redhat.com/sites/default/files/attachments/rh_ip_command_cheatsheet_1214_jcs_print.pdf
 #   - how to use: https://linuxize.com/post/linux-ip-command/
 
 # iw: tool for wireless devices, substitutes iwconfig
@@ -60,7 +60,7 @@ WPA_MODE="WPA-PSK"
 SSID="${SSID:=DAppNodeWIFI}"
 SUBNET="${SUBNET:=172.33.12.0}"
 AP_ADDR="${AP_ADDR:=172.33.12.254}"
-DNS="${DNS:=172.33.1.2}"
+DNS_SERVER="${DNS_SERVER:=172.33.1.2}"
 NAT="${NAT:=true}"
 INTERFACE="${INTERFACE:=}"
 CHANNEL="${CHANNEL:=11}"
@@ -68,12 +68,8 @@ WPA_PASSPHRASE="${WPA_PASSPHRASE:=dappnode}"
 HW_MODE="${HW_MODE:=g}"
 DRIVER="${DRIVER:=nl80211}"
 HT_CAPAB="${HT_CAPAB:=[HT40-][SHORT-GI-20]}"
-
-# Other parameters
-SUBNET="192.168.7"
-IP_AP="192.168.7.1"
-NETMASK="/24"
-DNS_SERVER="8.8.8.8"
+IP_AP="${IP_AP:=nl80211}"
+NETMASK="${NETMASK:=/24}"
 
 # Docker
 CONTAINER_PID=$(docker inspect -f '{{.State.Pid}}' ${HOSTNAME})
@@ -106,9 +102,9 @@ print_banner () {
     echo ""
 }
 
-# Get host interface
+# Get host interface: WARNING! host network interface may disappear for a while and not exist for up to 2 minutes
 function get_interface {
-    # host network interface may disappear for a while and not exist for up to 2 minutes
+    # 1, Get interface
     # iw dev returns empty value if does not exist
     INTERFACE=$(docker run -t --privileged --net=host --pid=host --rm --entrypoint /bin/sh ${CONTAINER_IMAGE} -c "iw dev" | grep 'Interface' | awk 'NR==1{print $2}')
     while [ -z ${INTERFACE} ]; do
@@ -118,21 +114,20 @@ function get_interface {
         INTERFACE=$(docker run -t --privileged --net=host --pid=host --rm --entrypoint /bin/sh ${CONTAINER_IMAGE} -c "iw dev" | grep 'Interface' | awk 'NR==1{print $2}')
     done
     echo -e "${BLUE}[INFO]${NC} Interface found: ${INTERFACE}"
+
+    # 2. double-Check interface exists in /sys/class/net/$INTERFACE
+    INTERFACE_EXISTS=$(${NSENTER_COMMAND} test -- -d /sys/class/net/${INTERFACE} && echo true || echo false)
+    [ ${INTERFACE_EXISTS} == "false" ] && echo -e "${RED}[ERROR]${NC} Interface ${INTERFACE} not detected on the host. Exiting..."
+    echo -e "${BLUE}[INFO]${NC} Interface ${INTERFACE} successfully detected on host"
+   
+    # 3. Check if is in used by the host
+    INTERFACE_DEFAULT_HOST=$(docker run -t --privileged --net=host --pid=host --rm --entrypoint /bin/sh ${CONTAINER_IMAGE} -c "ip r" | grep default | cut -d " " -f5)
+    # Unblock default network interface, if its in use by the host it may loose internet connection
+    [ $INTERFACE == $INTERFACE_DEFAULT_HOST ] && echo -e "${YELLOW}[WARNING]${NC} The selected interface is configured as the default route, attemping to unblock it" && $(${NSENTER_COMMAND} rfkill unblock wifi)
 }
 
 # Set up interface in container
 function interface_setup {
-    # Check interface exists in /sys/class/net/$INTERFACE
-    INTERFACE_EXISTS=$(${NSENTER_COMMAND} test -- -d /sys/class/net/${INTERFACE} && echo true || echo false)
-    [ ${INTERFACE_EXISTS} == "false" ] && echo -e "${RED}[ERROR]${NC} Interface ${INTERFACE} not detected on the host. Exiting..." && exit 1
-
-    echo -e "${BLUE}[INFO]${NC} Interface ${INTERFACE} successfully detected on host"
-   
-    # Get default interface used by the host
-    INTERFACE_DEFAULT_HOST=$(${NSENTER_COMMAND} ip r | grep default | cut -d " " -f5)
-
-    # Unblock default network interface, if its in use by the host it may loose internet connection
-    [ $INTERFACE == $INTERFACE_DEFAULT_HOST ] && echo -e "${YELLOW}[WARNING]${NC} The selected interface is configured as the default route, attemping to unblock it" && ${NSENTER_COMMAND} rfkill unblock wifi
     echo -e "${BLUE}[INFO]${NC} Starting interface ${INTERFACE}"
     ip link set "$INTERFACE" up
 }
@@ -140,7 +135,9 @@ function interface_setup {
 # get physical network device from host
 function get_phy {
     # Assign name of phy if exists, otherwhise empty value
-    PHY=$(docker run -t --privileged --net=host --pid=host --rm --entrypoint /bin/sh ${CONTAINER_IMAGE} -c "test -f /sys/class/net/${INTERFACE}/phy80211/name && cat /sys/class/net/wlan0/phy80211/name || echo ''")
+    PHY_OUTPUT=$(docker run -t --privileged --net=host --pid=host --rm --entrypoint /bin/bash ${CONTAINER_IMAGE} -c "test -f /sys/class/net/${INTERFACE}/phy80211/name && cat /sys/class/net/wlan0/phy80211/name || echo ''")
+    # Clean PHY_OUTPUT: It may have escape chars \n
+    PHY=${PHY_OUTPUT//[$'\t\r\n ']}
     # Exit if PHY is empty
     [ -z "$PHY" ] && echo -e "${RED}[ERROR]${NC} Could not get the phy name at: /sys/class/net/${INTERFACE}/phy80211/name" && exit 1
     echo -e "${BLUE}[INFO]${NC} Physical network device detected: ${PHY}"
@@ -148,6 +145,12 @@ function get_phy {
 
 # Link physical network device to container
 function phy_setup {
+    # WARNING!: This command will make dissappear the network interface (wlan0) and the network physical device (phy0) from the host
+    # phy <phyname> set netns { <pid> | name <nsname> }
+		# Put this wireless device into a different network namespace:
+		    # <pid>    - change network namespace by process id
+		    # <nsname> - change network namespace by name from /run/netns
+		               # or by absolute path (man ip-netns)
     docker run -t --privileged --net=host --pid=host --rm --entrypoint /bin/sh ${CONTAINER_IMAGE} -c "iw phy ${PHY} set netns ${CONTAINER_PID}"
 }
 
@@ -175,9 +178,10 @@ wpa_ptk_rekey=600
 ieee80211n=1
 wmm_enabled=1
 EOF
-    rc-service hostapd restart
+    # rc-service hostapd start
     fi
-    
+    echo -e "${BLUE}[INFO]${NC} Starting hostapd"
+    /usr/sbin/hostapd & 
 }
 
 # Create dnsmasq.conf && restart dnsmasq.service if needed
@@ -196,25 +200,30 @@ interface=lo,${INTERFACE}
 no-dhcp-interface=lo
 dhcp-range=${SUBNET}.20,${SUBNET}.254,255.255.255.0,12h
 EOF
-        rc-service dnsmasq restart
+        # rc-service dnsmasq start
     fi
+    echo -e "${BLUE}[INFO]${NC} Starting dnsmasq"
+    /usr/sbin/dnsmasq & wait ${!} 
+}
+
+function ip_forward {
+    # IP forwarding
+    echo "Enabling ip_dynaddr, ip_forward"
+    for i in ip_dynaddr ip_forward ; do 
+        if [ $(cat /proc/sys/net/ipv4/$i) ]; then
+            echo -e "${BLUE}[INFO]${NC} $i already 1"
+            echo $i already 1 
+        else
+            echo "1" > /proc/sys/net/ipv4/$i
+        fi
+    done
 }
 
 function service_start {
-    # 1. Assign phy wireless interface to the container 
-    # 2. Assign an IP to the wifi interface
-    # 3. iptables rules for NAT
-    # 4. Enable IP forwarding
-    docker run -t --privileged --net=host --pid=host --rm --entrypoint /bin/sh ${CONTAINER_IMAGE} -c "
-        iw phy ${PHY} set netns ${CONTAINER_PID} 
-        ip netns exec ${CONTAINER_PID} ip addr flush dev ${INTERFACE}
-        ip netns exec ${CONTAINER_PID} ip link set ${INTERFACE} up
-        ip netns exec ${CONTAINER_PID} ip addr add ${IP_AP}${NETMASK} dev ${INTERFACE}
-        ip netns exec ${CONTAINER_PID} ip addr flush dev ${INTERFACE}
-        ip netns exec ${CONTAINER_PID} ip link set ${INTERFACE} up
-        ip netns exec ${CONTAINER_PID} ip addr add ${IP_AP$NETMASK} dev ${INTERFACE}
-        ip netns exec ${CONTAINER_PID} iptables -t nat -A POSTROUTING -s ${SUBNET}.0${NETMASK} ! -d ${SUBNET}.0${NETMASK} -j MASQUERADE
-        ip netns exec ${CONTAINER_PID} echo 1 > /proc/sys/net/ipv4/ip_forward"
+    ip addr flush dev ${INTERFACE}
+    ip addr add ${AP_ADDR}${NETMASK} dev ${INTERFACE}
+    iptables -t nat -A POSTROUTING -s ${SUBNET}.0${NETMASK} ! -d ${SUBNET}.0${NETMASK} -j MASQUERADE
+    ip_forward
 
     # If needed: edit and reload hostapd and dnsmasq
     hostapd_setup
@@ -223,7 +232,7 @@ function service_start {
 
 function service_stop {
     # Remove ip address
-    docker run -t --privileged --net=host --pid=host --rm --entrypoint /bin/sh ${CONTAINER_IMAGE} -c "ip addr del ${IP_AP}${NETMASK} dev ${INTERFACE} > /dev/null 2>&1"
+    docker run -t --privileged --net=host --pid=host --rm --entrypoint /bin/sh ${CONTAINER_IMAGE} -c "ip addr del ${AP_ADDR}${NETMASK} dev ${INTERFACE} > /dev/null 2>&1"
 }
 
 ###########
