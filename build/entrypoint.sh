@@ -31,16 +31,6 @@
 
 # TODO: Resarch on how to sustitute the eth0 wired interface by a wireless interface
 
-# FLOW
-# 0. Main services to run on wifi container: dnsmasq && hostapd. 
-# 1. Assign default wlan values to variables if does not exist
-# 2. Get network interface && check requirements && link to container && up
-# 3. Get PHYsical interface && check requirements && link to container && up
-# 4. Set rules netns
-# 5. If hostapd and dnsmasq files not edited, edit config files and reload services
-# 6. Entrypoint waiting forever
-
-
 ########
 # VARS #
 ########
@@ -160,6 +150,7 @@ function phy_setup {
 		    # <pid>    - change network namespace by process id
 		    # <nsname> - change network namespace by name from /run/netns
 		               # or by absolute path (man ip-netns)
+    echo -e "${BLUE}[INFO]${NC} Attaching physical network device ${PHY} to container pid"
     docker run -t --privileged --net=host --pid=host --rm --entrypoint /bin/sh ${CONTAINER_IMAGE} -c "iw phy ${PHY} set netns ${CONTAINER_PID}"
 }
 
@@ -211,9 +202,8 @@ EOF
     fi
 }
 
+# IP forwarding
 function ip_forward {
-    # IP forwarding
-    echo -e "${BLUE}[INFO]${NC} Enabling ip_dynaddr, ip_forward"
     for i in ip_dynaddr ip_forward ; do 
         if [ $(cat /proc/sys/net/ipv4/$i) ]; then
             echo -e "${BLUE}[INFO]${NC} $i already 1"
@@ -223,10 +213,15 @@ function ip_forward {
     done
 }
 
+# Configure IP settings (address, subnet, ip forwarding, ip tables)
 function ip_setup {
+    echo -e "${BLUE}[INFO]${NC} Removing addresses from interface ${INTERFACE}"
     ip addr flush dev "${INTERFACE}"
+    echo -e "${BLUE}[INFO]${NC} Attaching wifi address to interface ${INTERFACE}"
     ip addr add "${AP_ADDR}/24" dev "${INTERFACE}"
+    echo -e "${BLUE}[INFO]${NC} Enabling ip_dynaddr, ip_forward"
     ip_forward
+    echo -e "${BLUE}[INFO]${NC} Generating ip tables for subnet ${SUBNET}"
     iptables -t nat -A POSTROUTING -s "${SUBNET}/24" ! -d "${SUBNET}/24" -j MASQUERADE
 }
 
@@ -243,8 +238,9 @@ function service_start {
 }
 
 function service_stop {
-    # Remove ip address
+    # Remove wifi ip address
     docker run -t --privileged --net=host --pid=host --rm --entrypoint /bin/sh ${CONTAINER_IMAGE} -c "ip addr del ${AP_ADDR}/24 dev ${INTERFACE} > /dev/null 2>&1"
+    # kill processes
     pkill hostapd
     pkill dnsmasq
 }
