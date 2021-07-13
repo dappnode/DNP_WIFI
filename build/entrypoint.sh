@@ -119,12 +119,16 @@ function get_interface {
     echo -e "${BLUE}[INFO]${NC} Interface ${INTERFACE} successfully detected on host"
    
     # 3. Check if interface blocked
-    # Example output:  "0 wlan      phy0   unblocked unblocked"
-    INTERFACE_BLOCKED=$(${CONTAINER_COMMAND} "rfkill | grep wlan")
+    # Example output:
+    # 0: phy0: wlan
+	#    Soft blocked: yes
+	#    Hard blocked: no
+
+    INTERFACE_BLOCKED=$(${CONTAINER_COMMAND} "rfkill list wlan")
     # "Soft blocked" means "blocked by software"
-    INTERFACE_SOFT_BLOCKED=$(echo ${INTERFACE_BLOCKED} | awk '{print $4}')
+    INTERFACE_SOFT_BLOCKED=$(echo "${INTERFACE_BLOCKED}" | grep -i soft | grep -i yes 1> /dev/null && echo "blocked" || echo "unblocked" )
     # "Hard blocked" cannot be changed by software, may need a reboot
-    INTERFACE_HARD_BLOCKED=$(echo ${INTERFACE_BLOCKED} | awk '{print $5}')
+    INTERFACE_HARD_BLOCKED=$(echo "${INTERFACE_BLOCKED}" | grep -i hard | grep -i yes 1> /dev/null && echo "blocked" || echo "unblocked" )
     # Exit if interface hard blocked
     [ "$INTERFACE_HARD_BLOCKED" == "blocked" ] && echo -e "${RED}[ERROR]${NC} The selected interface is hard blocked on the host, a reboot may be necessary. Stopping gracefully" && exit 0
     # Unblock default network interface, if its in use by the host it may loose internet connection
