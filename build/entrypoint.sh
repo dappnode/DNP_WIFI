@@ -238,9 +238,13 @@ function service_start {
 }
 
 function service_stop {
-    # Remove wifi ip address
-    docker run -t --privileged --net=host --pid=host --rm --entrypoint /bin/sh ${CONTAINER_IMAGE} -c "ip addr del ${AP_ADDR}/24 dev ${INTERFACE} > /dev/null 2>&1"
-    # kill processes
+    echo -e "${BLUE}[INFO]${NC} Removing wifi IP address from ${INTERFACE}..."
+    ip addr del ${AP_ADDR}/24 dev ${INTERFACE} > /dev/null 2>&1
+
+    echo -e "${BLUE}[INFO]${NC} Switching down ${INTERFACE}..."
+    ip link set "$INTERFACE" down
+
+    echo -e "${BLUE}[INFO]${NC} Killing daemons hostapd and dnsmasq..."
     pkill hostapd
     pkill dnsmasq
 }
