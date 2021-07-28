@@ -151,7 +151,10 @@ function phy_setup {
 		    # <nsname> - change network namespace by name from /run/netns
 		               # or by absolute path (man ip-netns)
     echo -e "${BLUE}[INFO]${NC} Attaching physical network device ${PHY} to container pid"
-    docker run -t --privileged --net=host --pid=host --rm --entrypoint /bin/sh ${CONTAINER_IMAGE} -c "iw phy ${PHY} set netns ${CONTAINER_PID}"
+    # If in compose does not share namespace with host
+    # docker run -t --privileged --net=host --pid=host --rm --entrypoint /bin/sh ${CONTAINER_IMAGE} -c "iw phy ${PHY} set netns ${CONTAINER_PID}"
+    # If in compose share namespace with host. pid: "host"
+    iw phy ${PHY} set netns ${CONTAINER_PID}
 }
 
 # Create hostapd.conf
@@ -247,6 +250,9 @@ function service_stop {
     echo -e "${BLUE}[INFO]${NC} Killing daemons hostapd and dnsmasq..."
     pkill hostapd
     pkill dnsmasq
+
+    # If in compose share namespace with host then set interface from the container back to the host. pid: "host"
+    iw phy ${PHY} set netns 1
 }
 
 ###########
