@@ -261,7 +261,7 @@ function service_stop {
 sigterm_handler () {
   echo -e "${BLUE}[INFO]${NC} Caught singal. Stopping wifi service gracefully"
   service_stop
-  clear
+  #clear
   exit 0
 }
 
