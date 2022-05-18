@@ -5,7 +5,7 @@ networks:
     external: true
 services:
   wifi.dnp.dappnode.eth:
-    build: ./build
+    build: ./src
     image: "wifi.dnp.dappnode.eth:0.2.8"
     container_name: DAppNodeCore-wifi.dnp.dappnode.eth
     environment:
