@@ -26,6 +26,6 @@ services:
         ipv4_address: 172.33.1.10
         aliases:
           - wifi.dappnode
-          - wifi.dappnode.dappnode
+          - wifi.wifi.dappnode
     logging:
       driver: journald
