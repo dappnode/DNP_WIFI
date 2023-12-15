@@ -23,7 +23,6 @@ services:
     restart: unless-stopped
     networks:
       dncore_network:
-        ipv4_address: 172.33.1.10
         aliases:
           - wifi.dappnode
     logging:
