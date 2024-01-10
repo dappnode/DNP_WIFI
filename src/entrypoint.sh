@@ -51,6 +51,7 @@ SSID="${SSID:=DAppNodeWIFI}"
 SUBNET="${SUBNET:=10.20.12.0}"
 AP_ADDR="${AP_ADDR:=10.20.12.254}"
 DNS_SERVER="${DNS_SERVER:=10.20.0.2}"
+OLD_DNS_SERVER="${OLD_DNS_SERVER:=172.33.1.2}"
 NAT="${NAT:=true}"
 INTERFACE="${INTERFACE:=}"
 CHANNEL="${CHANNEL:=11}"
@@ -195,6 +196,7 @@ function dnsmasq_setup {
 # DAPPNODE
 no-resolv 
 server=${DNS_SERVER}
+server=${OLD_DNS_SERVER}
 interface=lo,${INTERFACE}
 no-dhcp-interface=lo
 dhcp-range=${SUBNET::-1}100,${SUBNET::-1}253,255.255.255.0,12h
