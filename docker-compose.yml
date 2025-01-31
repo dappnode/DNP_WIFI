@@ -12,7 +12,7 @@ services:
       - SSID=DAppNodeWIFI
       - WPA_PASSPHRASE=dappnode
       - NAT=true
-      - CHANNEL=11
+      - CHANNEL=${CHANNEL:-11}
       - MODE=admin
       - INTERFACE
       - ADVANCED_OPTIONS=no
