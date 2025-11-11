@@ -47,7 +47,7 @@ ARCH=$(arch)
 
 # WLAN parameters
 WPA_MODE="WPA-PSK"
-SSID="${SSID:=DAppNodeWIFI}"
+SSID="${SSID:=DappnodeWIFI}"
 SUBNET="${SUBNET:=10.20.12.0}"
 AP_ADDR="${AP_ADDR:=10.20.12.254}"
 DNS_SERVER="${DNS_SERVER:=10.20.0.2}"
