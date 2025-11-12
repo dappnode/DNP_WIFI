@@ -95,6 +95,7 @@ print_banner () {
 function get_interface {
     # 1, Get interface name from host
     INTERFACE=$(${CONTAINER_COMMAND} "iw dev" | grep 'Interface' | awk 'NR==1{print $2}')
+	INTERFACE=${INTERFACE//[$'\t\r\n ']}
     while [ -z ${INTERFACE} ]; do
         echo "Waiting for WIFI interface..."
         ((COUNT++)) && ((COUNT==20)) && echo -e "${YELLOW}[WARNING]${NC} No interface found after 120s, stopping gracefully" && exit 0
