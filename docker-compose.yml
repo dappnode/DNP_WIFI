@@ -4,7 +4,7 @@ networks:
     name: dncore_network
     external: true
 services:
-  wifi.dnp.dappnode.eth:
+  wifi:
     build: ./src
     image: "wifi.dnp.dappnode.eth:0.2.8"
     container_name: DAppNodeCore-wifi.dnp.dappnode.eth
@@ -24,5 +24,6 @@ services:
       dncore_network:
         aliases:
           - wifi.dappnode
+          - wifi.wifi.dappnode
     logging:
       driver: journald
