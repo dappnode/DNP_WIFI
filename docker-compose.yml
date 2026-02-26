@@ -24,5 +24,3 @@ services:
       dncore_network:
         aliases:
           - wifi.dappnode
-    logging:
-      driver: journald
