@@ -56,6 +56,23 @@ $ docker-compose up -d
 $ docker-compose down
 ```
 
+### NAT and routed mode
+
+`NAT=true` (the default) enables masquerading for the WiFi subnet. Set
+`NAT=false` in Advanced Options to use routed mode; the upstream network must
+then have a return route to the WiFi subnet. Both modes enable IPv4 forwarding
+and `ip_dynaddr`. Other NAT values cause startup to fail before moving the radio.
+Repeated network setup does not add duplicate masquerade rules. Switching to
+routed mode removes exact copies of the package's existing rule, including
+duplicates from older versions, and preserves other rules.
+
+Run the isolated regression tests without a radio or firewall privileges:
+
+```sh
+python3 -m unittest discover -s tests -v
+bash -n src/entrypoint.sh src/network.sh
+```
+
 ### Status
 
 ```

@@ -44,6 +44,11 @@ fields:
       name: NAT
     title: NAT
     description: >-
-      Configure WIFI as NAT
+      Use true to masquerade WiFi traffic. Use false for routed mode, which
+      requires an upstream return route to the WiFi subnet. IPv4 forwarding
+      remains enabled in both modes.
+    enum:
+      - "true"
+      - "false"
     required: true
     if: { "advanced": { "enum": ["yes"] } }

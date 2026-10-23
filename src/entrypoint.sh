@@ -206,27 +206,19 @@ EOF
     fi
 }
 
-# IP forwarding
-function ip_forward {
-    for i in ip_dynaddr ip_forward ; do 
-        if [ $(cat /proc/sys/net/ipv4/$i) ]; then
-            echo -e "${BLUE}[INFO]${NC} $i already 1"
-        else
-            echo "1" > /proc/sys/net/ipv4/$i
-        fi
-    done
-}
+# Forwarding and NAT are kept separate: routed mode also needs forwarding.
+source "$(dirname "${BASH_SOURCE[0]}")/network.sh"
 
 # Configure IP settings (address, subnet, ip forwarding, ip tables)
 function ip_setup {
     echo -e "${BLUE}[INFO]${NC} Removing addresses from interface ${INTERFACE}"
-    ip addr flush dev "${INTERFACE}"
+    ip addr flush dev "${INTERFACE}" || return 1
     echo -e "${BLUE}[INFO]${NC} Attaching wifi address to interface ${INTERFACE}"
-    ip addr add "${AP_ADDR}/24" dev "${INTERFACE}"
+    ip addr add "${AP_ADDR}/24" dev "${INTERFACE}" || return 1
     echo -e "${BLUE}[INFO]${NC} Enabling ip_dynaddr, ip_forward"
-    ip_forward
-    echo -e "${BLUE}[INFO]${NC} Generating ip tables for subnet ${SUBNET}"
-    iptables -t nat -A POSTROUTING -s "${SUBNET}/24" ! -d "${SUBNET}/24" -j MASQUERADE
+    ip_forward || return 1
+    echo -e "${BLUE}[INFO]${NC} Configuring NAT=${NAT} for subnet ${SUBNET}"
+    nat_setup || return 1
 }
 
 # Execute binaries for hostapd and dnsmasq, do not change the current order of execution. Another approach would be to use them as services and execute them on startup (check Dockerfile comment)
@@ -274,10 +266,11 @@ trap 'sigterm_handler' TERM INT
 # MAIN #
 ########
 
+validate_nat || exit 1
 print_banner
 get_interface
 get_phy
 phy_setup
 interface_setup
-ip_setup
+ip_setup || exit 1
 service_start
