@@ -11,6 +11,7 @@ RUN apk add --no-cache 'ca-certificates>=20261020' 'ca-certificates-bundle>=2026
 
 # Entrypoint executable
 COPY entrypoint.sh /usr/bin/entrypoint.sh
+COPY network.sh /usr/bin/network.sh
 RUN chmod u+x /usr/bin/entrypoint.sh
 
 ENTRYPOINT [ "/usr/bin/entrypoint.sh" ]
